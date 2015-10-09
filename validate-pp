@@ -1,0 +1,90 @@
+#!/usr/bin/ruby -w
+require 'thread'
+require 'pmap'
+puts
+
+# Valid command line flags
+VALID_ARGS = %w(-a -g -f -d -h --help)
+
+# Parse ARGV[0], make sure the flag passed is valid.
+unless VALID_ARGS.include? ARGV[0]
+  puts "validate-pp needs a command line option" unless ARGV[0]
+  puts "Invalid option: '#{ARGV[0]}'" if ARGV[0]
+  puts "Use validate-pp -h for usage tips"
+  exit!
+end
+
+if %w(-h --help).include? ARGV[0]
+  puts "validate-pp has five valid options:"
+  puts "'-a': All. Parse the current directory for .pp files, validate any found. This is the default behavior."
+  puts "'-g': Check files reported as new or modified by git, if the current directory is a valid git repo."
+  puts "'-f <file1> <file2> <filen>: Specify files to check, either absolute paths or relative to the working dir."
+  puts "'-d <directory>': Parse the given directory for .pp files, validate any found."
+  puts "'-h': Display this help message. "
+  puts
+  exit!
+end
+
+
+
+# Class to represent .pp file objects.
+class PuppetFile
+
+  # This will be the work queue our thread pool pulls from
+  # to validate the .pp files.
+  @@puppet_files = Queue.new
+  # Array to keep track of files that fail validation.
+  @@invalid_files = []
+
+  # return the queue of puppet files.
+  def self.puppet_files
+    @@puppet_files
+  end
+
+  attr_accessor :filename
+
+  # Create a puppet file. All we need is the filename,
+  # and to validate that it's actually a .pp file.
+  def initialize(filename)
+    unless File.extname(filename) == '.pp'
+      raise ArgumentError, "#{filename} does not appear to be a valid puppet file."
+      exit!
+    end
+    @filename = filename
+    # Add the new object to the queue.
+    @@puppet_files.push(self)
+  end
+  
+  # Use puppet parser to validate the puppet file.
+  # if it fails validation, add it to the @@invalid_files array.
+  def validate
+    valid_file = system("puppet parser validate #{self.filename}")
+    unless valid_file
+      @@invalid_files << self
+    end
+
+  end
+  
+end
+
+
+
+
+
+
+# Dir['**/*'].each do |file|
+#   next if File.directory?(file)
+
+#   if File.extname(file) == '.pp'
+#     puts "Validating #{file}..."
+#     valid_file = system("puppet parser validate #{file}")
+
+#     if valid_file == false
+#       puts "Fix errors, then press enter to re-validate the file..."
+#       gets
+#       redo
+#     end
+
+#   end
+
+# end
