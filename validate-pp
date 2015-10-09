@@ -1,6 +1,5 @@
 #!/usr/bin/ruby -w
 require 'thread'
-require 'pmap'
 
 # Valid command line flags
 VALID_ARGS = %w(-a -g -f -d -h --help)
@@ -130,7 +129,7 @@ def parse_args
         exit!
       end  
     end
-    ARGV.peach { |f| PuppetFile.new(File.expand_path(f)) }
+    ARGV.each { |f| PuppetFile.new(File.expand_path(f)) }
 
   when '-g'
     if ARGV[1]
@@ -150,7 +149,7 @@ def parse_directory(dir)
   Dir.chdir dir
   ppfiles = Dir.glob(search)
   
-  ppfiles.peach { |f| PuppetFile.new(File.expand_path(f)) }
+  ppfiles.each { |f| PuppetFile.new(File.expand_path(f)) }
 
 end
 
@@ -175,7 +174,7 @@ def parse_git_repo
   # narrow it to just the .pp files.
   files.select! { |f| File.extname(f) == '.pp' }
   files.uniq! # remove dupes.
-  files.peach { |f| PuppetFile.new(File.expand_path(f)) }
+  files.each { |f| PuppetFile.new(File.expand_path(f)) }
 end
 
 
