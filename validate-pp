@@ -17,6 +17,7 @@ unless VALID_ARGS.include? ARGV[0]
   exit!
 end
 
+# Help output.
 if %w(-h --help).include? ARGV[0]
   usage
   puts
@@ -91,11 +92,8 @@ end
 
 
 
-
-
 # parse_args method figures out what we're supposed to do
 # based on the command line arguments.
-
 def parse_args
 
   case ARGV[0]
@@ -142,6 +140,7 @@ def parse_args
       
 end
 
+
 # Parse a given directory for .pp files and make new 
 # PuppetFile instances with them.
 def parse_directory(dir)
@@ -160,7 +159,7 @@ end
 def parse_git_repo
   git_output = `git status --porcelain 2>&1`
   unless $?.exitstatus == 0
-    puts "git error: make sure the directory is a valid repo and that git is working."
+    puts "Git error: make sure the current directory is a valid repo and that git is working."
     exit!
   end
   list = git_output.split("\n")
@@ -171,9 +170,7 @@ def parse_git_repo
     a << file[1] if file
     a
   end
-  # narrow it to just the .pp files.
-  files.select! { |f| File.extname(f) == '.pp' }
-  files.uniq! # remove dupes.
+  files.uniq! # remove dupes, just in case.
   files.each { |f| PuppetFile.new(File.expand_path(f)) }
 end
 
@@ -197,9 +194,8 @@ def validate_files
 end
 
 
-
-def handle_errors
-  # error handling sucks right now.
+# How'd it go?
+def output_results
   if PuppetFile.invalid_files.any?
     puts "\nThe following files had errors:\n\n"
     PuppetFile.invalid_files.each do |file|
@@ -219,4 +215,4 @@ parse_args
 
 validate_files
 
-handle_errors
+output_results
