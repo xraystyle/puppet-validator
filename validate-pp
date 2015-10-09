@@ -32,13 +32,13 @@ class PuppetFile
 
   # This will be the work queue our thread pool pulls from
   # to validate the .pp files.
-  @@puppet_files = Queue.new
+  @@all_files = Queue.new
   # Array to keep track of files that fail validation.
   @@invalid_files = []
 
   # return the queue of puppet files.
-  def self.puppet_files
-    @@puppet_files
+  def self.all_files
+    @@all_files
   end
   # return the list of invalid files.
   def self.invalid_files
@@ -56,15 +56,15 @@ class PuppetFile
     end
     @filename = File.expand_path(filename.sub(' ', '\ '))
     # Add the new object to the queue.
-    @@puppet_files.push(self)
+    @@all_files.push(self)
   end
   
   # Use puppet parser to validate the puppet file.
   # if it fails validation, add it to the @@invalid_files array.
   def validate
-    valid_file = system("puppet parser validate #{File.expand_path(self.filename)}")
-    unless valid_file
-      @@invalid_files << self
+    output = `puppet parser validate #{File.expand_path(self.filename)} 2>&1`
+    if $?.exitstatus != 0
+      @@invalid_files << { filename: self.filename, error: output }
     end
 
   end
@@ -141,15 +141,44 @@ end
 # of new or modified files. Make PuppetFile instances out of the
 # ones that are .pp files.
 def parse_git_repo
-  
+  puts "Git repo functionality not yet implemented."
+  exit!
+end
+
+# Validate the files stored in our PuppetFile files queue.
+def validate_files
+  workers = (0..9).map do
+    Thread.new do
+      begin
+        while puppetfile = PuppetFile.all_files.pop(true)
+          puppetfile.validate
+        end
+      rescue ThreadError
+      end
+    end
+  end
+  workers.map(&:join)
 end
 
 
+
+def handle_errors
+  # error handling sucks right now.
+  puts "The following files had errors:\n\n"
+  PuppetFile.invalid_files.each do |file|
+    puts "File: #{file[:filename]}"
+    puts file[:error]
+    puts
+  end
+end
 
 # -------------------------- Begin Script ---------------------------
 
 parse_args
 
+validate_files
+
+handle_errors
 
 
 
@@ -157,11 +186,12 @@ parse_args
 
 
 
-# Test output
-# until PuppetFile.puppet_files.empty?
 
-#   temp = PuppetFile.puppet_files.pop
-#   puts "Validating #{File.expand_path(temp.filename)}..."
+# # Test output
+# until PuppetFile.all_files.empty?
+
+#   temp = PuppetFile.all_files.pop
+#   # puts "Validating #{File.expand_path(temp.filename)}..."
 #   temp.validate
 
 # end
