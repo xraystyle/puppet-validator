@@ -118,7 +118,21 @@ def parse_args
   end
       
 end
+
+# Parse a given directory for .pp files and make new 
+# PuppetFile instances with them.
+def parse_directory(dir)
   
+end
+
+
+# If the current directory is a valid git repo, get the list
+# of new or modified files. Make PuppetFile instances out of the
+# ones that are .pp files.
+def parse_git_repo
+  
+end
+
 
 
 
