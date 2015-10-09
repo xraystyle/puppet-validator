@@ -40,6 +40,10 @@ class PuppetFile
   def self.puppet_files
     @@puppet_files
   end
+  # return the list of invalid files.
+  def self.invalid_files
+    @@invalid_files
+  end
 
   attr_accessor :filename
 
@@ -50,7 +54,7 @@ class PuppetFile
       puts "Error, #{filename} does not appear to be a valid puppet file."
       exit!
     end
-    @filename = filename
+    @filename = File.expand_path(filename.sub(' ', '\ '))
     # Add the new object to the queue.
     @@puppet_files.push(self)
   end
@@ -58,7 +62,7 @@ class PuppetFile
   # Use puppet parser to validate the puppet file.
   # if it fails validation, add it to the @@invalid_files array.
   def validate
-    valid_file = system("puppet parser validate #{self.filename}")
+    valid_file = system("puppet parser validate #{File.expand_path(self.filename)}")
     unless valid_file
       @@invalid_files << self
     end
@@ -84,7 +88,7 @@ def parse_args
       puts "Run `validate-pp -h` for more info."
       exit!
     end
-    parse_directory(Dir.pwd)
+    parse_directory(File.expand_path(Dir.pwd))
 
   when '-d'
     ARGV.shift
@@ -95,7 +99,7 @@ def parse_args
         exit!
       end
     end
-    ARGV.peach { |d| parse_directory(File.expand_path(d) }
+    ARGV.peach { |d| parse_directory(File.expand_path(d)) }
 
   when "-f"
     ARGV.shift
@@ -123,7 +127,7 @@ end
 # PuppetFile instances with them.
 def parse_directory(dir)
   search = File.join("**", "*.pp")
-  Dir.chdir d
+  Dir.chdir dir
   ppfiles = Dir.glob(search)
   
   ppfiles.peach do |f|
@@ -142,22 +146,24 @@ end
 
 
 
+# -------------------------- Begin Script ---------------------------
+
+parse_args
 
 
 
-# Dir['**/*'].each do |file|
-#   next if File.directory?(file)
 
-#   if File.extname(file) == '.pp'
-#     puts "Validating #{file}..."
-#     valid_file = system("puppet parser validate #{file}")
 
-#     if valid_file == false
-#       puts "Fix errors, then press enter to re-validate the file..."
-#       gets
-#       redo
-#     end
 
-#   end
+
+
+# Test output
+# until PuppetFile.puppet_files.empty?
+
+#   temp = PuppetFile.puppet_files.pop
+#   puts "Validating #{File.expand_path(temp.filename)}..."
+#   temp.validate
 
 # end
+
+# puts "Invalid files: #{PuppetFile.invalid_files}"
