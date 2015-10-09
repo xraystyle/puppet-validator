@@ -1,7 +1,6 @@
 #!/usr/bin/ruby -w
 require 'thread'
 require 'pmap'
-puts
 
 # Valid command line flags
 VALID_ARGS = %w(-a -g -f -d -h --help)
@@ -10,17 +9,17 @@ VALID_ARGS = %w(-a -g -f -d -h --help)
 unless VALID_ARGS.include? ARGV[0]
   puts "validate-pp needs a command line option" unless ARGV[0]
   puts "Invalid option: '#{ARGV[0]}'" if ARGV[0]
-  puts "Use validate-pp -h for usage tips"
+  puts "Use validate-pp -h for help."
   exit!
 end
 
 if %w(-h --help).include? ARGV[0]
   puts "validate-pp has five valid options:"
-  puts "'-a': All. Parse the current directory for .pp files, validate any found. This is the default behavior."
-  puts "'-g': Check files reported as new or modified by git, if the current directory is a valid git repo."
-  puts "'-f <file1> <file2> <filen>: Specify files to check, either absolute paths or relative to the working dir."
-  puts "'-d <directory1> <directory2> <directoryn>': Parse the given directory for .pp files, validate any found."
-  puts "'-h': Display this help message. "
+  puts "'-a' All. Validate any .pp files found in the current directory and all subdirectories."
+  puts "'-g' Check files reported as new or modified by git, if the current directory is a valid git repo."
+  puts "'-f <file-1>..<file-n>' Specify files to check, either absolute paths or relative to the working dir."
+  puts "'-d <directory-1>..<directory-n>' Parse the given directories for .pp files, validate any found."
+  puts "'-h' Display this help message. "
   puts
   exit!
 end
@@ -164,7 +163,7 @@ end
 
 def handle_errors
   # error handling sucks right now.
-  puts "The following files had errors:\n\n"
+  puts "\nThe following files had errors:\n\n"
   PuppetFile.invalid_files.each do |file|
     puts "File: #{file[:filename]}"
     puts file[:error]
