@@ -5,25 +5,44 @@ require 'pmap'
 # Valid command line flags
 VALID_ARGS = %w(-a -g -f -d -h --help)
 
+def usage
+  puts "usage: validate-pp [-a] [-g] [-f <file-1>..<file-n>]"
+  puts "       [-d <directory-1>..<directory-n>] [-h | --help]"
+end
+
 # Parse ARGV[0], make sure the flag passed is valid.
 unless VALID_ARGS.include? ARGV[0]
-  puts "validate-pp needs a command line option" unless ARGV[0]
+  puts "validate-pp needs a command line option." unless ARGV[0]
   puts "Invalid option: '#{ARGV[0]}'" if ARGV[0]
-  puts "Use validate-pp -h for help."
+  usage
   exit!
 end
 
 if %w(-h --help).include? ARGV[0]
-  puts "validate-pp has five valid options:"
-  puts "'-a' All. Validate any .pp files found in the current directory and all subdirectories."
-  puts "'-g' Check files reported as new or modified by git, if the current directory is a valid git repo."
-  puts "'-f <file-1>..<file-n>' Specify files to check, either absolute paths or relative to the working dir."
-  puts "'-d <directory-1>..<directory-n>' Parse the given directories for .pp files, validate any found."
-  puts "'-h' Display this help message. "
+  usage
+  puts
+  puts "validate-pp uses the `puppet parser validate` command to validate"
+  puts "files with the '.pp' extension in bulk. This makes it easy to validate"
+  puts "an entire puppet directory before committing to a git repo, for example."
+  puts
+  puts "Valid options:"
+  puts
+  puts "-a"
+  puts "    Validate every '.pp' file in the current directory and all subdirectories.\n\n"
+  puts "-d <directory-1>..<directory-n>"
+  puts "    Validate every '.pp' file in each given directory, and in all of their subdirectories.\n\n"
+  puts "-f <file-1>..<file-n>"
+  puts "    Validate each file listed on the command line.\n\n"
+  puts "-g"
+  puts "    If the current directory is a valid git repository, validate any '.pp' file in the repo"
+  puts "    that has been changed, copied, moved or renamed since the last commit. This can be"
+  puts "    significantly faster than using -a to parse a large puppet repo unnecessarily if"
+  puts "    most of the files in the repo are unchanged.\n\n"
+  puts "-h"
+  puts "    Display this help message."
   puts
   exit!
 end
-
 
 
 # Class to represent .pp file objects.
@@ -61,6 +80,7 @@ class PuppetFile
   # Use puppet parser to validate the puppet file.
   # if it fails validation, add it to the @@invalid_files array.
   def validate
+    puts "Validating #{self.filename}..."
     output = `puppet parser validate #{File.expand_path(self.filename)} 2>&1`
     if $?.exitstatus != 0
       @@invalid_files << { filename: self.filename, error: output }
@@ -98,7 +118,8 @@ def parse_args
         exit!
       end
     end
-    ARGV.peach { |d| parse_directory(File.expand_path(d)) }
+    dirs = ARGV.map { |d| File.expand_path(d) }
+    dirs.each { |d| parse_directory(d) }
 
   when "-f"
     ARGV.shift
@@ -129,9 +150,7 @@ def parse_directory(dir)
   Dir.chdir dir
   ppfiles = Dir.glob(search)
   
-  ppfiles.peach do |f|
-    PuppetFile.new(File.expand_path(f))
-  end
+  ppfiles.peach { |f| PuppetFile.new(File.expand_path(f)) }
 
 end
 
@@ -140,13 +159,32 @@ end
 # of new or modified files. Make PuppetFile instances out of the
 # ones that are .pp files.
 def parse_git_repo
-  puts "Git repo functionality not yet implemented."
-  exit!
+  git_output = `git status --porcelain 2>&1`
+  unless $?.exitstatus == 0
+    puts "git error: make sure the directory is a valid repo and that git is working."
+    exit!
+  end
+  list = git_output.split("\n")
+  # Get just what was added, modified, copied or moved.
+  # Skip deleted files.
+  files = list.reduce([]) do |a, f|
+    file = /[\?MARC ]{1,2} (.*\.pp)/.match f
+    a << file[1] if file
+    a
+  end
+  # narrow it to just the .pp files.
+  files.select! { |f| File.extname(f) == '.pp' }
+  files.uniq! # remove dupes.
+  files.peach { |f| PuppetFile.new(File.expand_path(f)) }
 end
+
+
+
 
 # Validate the files stored in our PuppetFile files queue.
 def validate_files
-  workers = (0..9).map do
+  # Thread pool with 5 workers. Adjust as desired.
+  workers = (0..4).map do
     Thread.new do
       begin
         while puppetfile = PuppetFile.all_files.pop(true)
@@ -163,12 +201,17 @@ end
 
 def handle_errors
   # error handling sucks right now.
-  puts "\nThe following files had errors:\n\n"
-  PuppetFile.invalid_files.each do |file|
-    puts "File: #{file[:filename]}"
-    puts file[:error]
-    puts
+  if PuppetFile.invalid_files.any?
+    puts "\nThe following files had errors:\n\n"
+    PuppetFile.invalid_files.each do |file|
+      puts "File: #{file[:filename]}"
+      puts file[:error]
+      puts
+    end
+  else
+    puts "No errors found, all parsed files appear valid."
   end
+
 end
 
 # -------------------------- Begin Script ---------------------------
