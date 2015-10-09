@@ -95,7 +95,7 @@ def parse_args
         exit!
       end
     end
-    ARGV.peach { |d| parse_directory(d) }
+    ARGV.peach { |d| parse_directory(File.expand_path(d) }
 
   when "-f"
     ARGV.shift
@@ -106,7 +106,7 @@ def parse_args
         exit!
       end  
     end
-    ARGV.peach { |f| PuppetFile.new(f) }
+    ARGV.peach { |f| PuppetFile.new(File.expand_path(f)) }
 
   when '-g'
     if ARGV[1]
@@ -122,7 +122,14 @@ end
 # Parse a given directory for .pp files and make new 
 # PuppetFile instances with them.
 def parse_directory(dir)
+  search = File.join("**", "*.pp")
+  Dir.chdir d
+  ppfiles = Dir.glob(search)
   
+  ppfiles.peach do |f|
+    PuppetFile.new(File.expand_path(f))
+  end
+
 end
 
 
