@@ -19,7 +19,7 @@ if %w(-h --help).include? ARGV[0]
   puts "'-a': All. Parse the current directory for .pp files, validate any found. This is the default behavior."
   puts "'-g': Check files reported as new or modified by git, if the current directory is a valid git repo."
   puts "'-f <file1> <file2> <filen>: Specify files to check, either absolute paths or relative to the working dir."
-  puts "'-d <directory>': Parse the given directory for .pp files, validate any found."
+  puts "'-d <directory1> <directory2> <directoryn>': Parse the given directory for .pp files, validate any found."
   puts "'-h': Display this help message. "
   puts
   exit!
@@ -47,7 +47,7 @@ class PuppetFile
   # and to validate that it's actually a .pp file.
   def initialize(filename)
     unless File.extname(filename) == '.pp'
-      raise ArgumentError, "#{filename} does not appear to be a valid puppet file."
+      puts "Error, #{filename} does not appear to be a valid puppet file."
       exit!
     end
     @filename = filename
@@ -67,6 +67,58 @@ class PuppetFile
   
 end
 
+
+
+
+
+# parse_args method figures out what we're supposed to do
+# based on the command line arguments.
+
+def parse_args
+
+  case ARGV[0]
+  when '-a'
+    # check that no arg was passed with the -a flag.
+    if ARGV[1]
+      puts "Error, '-a' flag cannot accept additional arguments."
+      puts "Run `validate-pp -h` for more info."
+      exit!
+    end
+    parse_directory(Dir.pwd)
+
+  when '-d'
+    ARGV.shift
+    ARGV.each do |d|
+      unless File.directory?(d)
+        puts "Error, #{d} is not a directory."
+        puts "Run `validate-pp -h` for more info."
+        exit!
+      end
+    end
+    ARGV.peach { |d| parse_directory(d) }
+
+  when "-f"
+    ARGV.shift
+    ARGV.each do |f|
+      unless File.extname(f) == '.pp'
+        puts "Error, #{f} is not a '.pp' file"
+        puts "Run `validate-pp -h` for more info."
+        exit!
+      end  
+    end
+    ARGV.peach { |f| PuppetFile.new(f) }
+
+  when '-g'
+    if ARGV[1]
+      puts "Error, '-g' flag cannot accept additional arguments."
+      puts "Run `validate-pp -h` for more info."
+      exit!
+    end
+    parse_git_repo
+  end
+      
+end
+  
 
 
 
