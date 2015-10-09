@@ -72,7 +72,7 @@ class PuppetFile
       puts "Error, #{filename} does not appear to be a valid puppet file."
       exit!
     end
-    @filename = File.expand_path(filename.sub(' ', '\ '))
+    @filename = File.expand_path(filename).sub(' ', '\ ')
     # Add the new object to the queue.
     @@all_files.push(self)
   end
@@ -81,13 +81,11 @@ class PuppetFile
   # if it fails validation, add it to the @@invalid_files array.
   def validate
     puts "Validating #{self.filename}..."
-    output = `puppet parser validate #{File.expand_path(self.filename)} 2>&1`
+    output = `puppet parser validate #{self.filename} 2>&1`
     if $?.exitstatus != 0
       @@invalid_files << { filename: self.filename, error: output }
     end
-
   end
-  
 end
 
 
