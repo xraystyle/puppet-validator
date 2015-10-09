@@ -220,21 +220,3 @@ parse_args
 validate_files
 
 handle_errors
-
-
-
-
-
-
-
-
-# # Test output
-# until PuppetFile.all_files.empty?
-
-#   temp = PuppetFile.all_files.pop
-#   # puts "Validating #{File.expand_path(temp.filename)}..."
-#   temp.validate
-
-# end
-
-# puts "Invalid files: #{PuppetFile.invalid_files}"
