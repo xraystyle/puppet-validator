@@ -30,6 +30,7 @@ Validate only the files that have been added, edited, copied, or moved according
 ```
 ### This is significantly faster than checking every file,
 ### especially as the codebase increases in size.
+
 modules $: git status
 On branch master
 Your branch is up-to-date with 'origin/master'.
