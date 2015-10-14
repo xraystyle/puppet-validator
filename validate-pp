@@ -211,6 +211,11 @@ end
 
 parse_args
 
-validate_files
+if PuppetFile.all_files.empty?
+  puts "No files found to validate."
+  exit!
+else
+  validate_files
+end
 
 output_results
