@@ -219,3 +219,7 @@ else
 end
 
 output_results
+
+exit 1 if PuppetFile.invalid_files.any?
+
+exit 0
